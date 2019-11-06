@@ -1,4 +1,4 @@
-package mobileModel
+package unicomModel
 
 import java.text.SimpleDateFormat
 
@@ -10,23 +10,20 @@ import java.util.Date
 import java.util.Calendar
 
 
-
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
-import test.{calcDis, cellData, movePoint, retrieve_neighbors, parse, tDbscanAndJudgeAttri,judgePointAttri}
-
+import firstCluster.{calcDis, cellData, movePoint,stopPoint, tDbscanAndJudgeAttri,judgePointAttri}
 
 
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.control.Breaks
 
-object weeks {
+object secondCluster {
 
-  var calendar = Calendar.getInstance()
-
+//  var calendar = Calendar.getInstance()  do not use global class member variable in spark, which will cause
   case class stableStopPoint(plng:Double, plat:Double,var attr:String="null",var daycount:String="NO" ,times:Iterable[(Date,Date)]) {
     def this(plng:Double, plat:Double,times:Iterable[(Date,Date)])
-      = this(plng,plat,"null","NO",times)
+    = this(plng,plat,"null","NO",times)
     override def toString: String = {
       var line = new StringBuilder()
       attr = this.attributeJudge(times)
@@ -44,23 +41,20 @@ object weeks {
       line.toString()
     }
     def attributeJudge(times: Iterable[(Date,Date)]): String = {
-      var unknown = 0L
-      var home = 0L
-      var work = 0L
+      var unknown = 0
+      var home = 0
+      var work = 0
       var result = "null"
       for (d<-times) {
         var result = judgePointAttri(d._1,d._2)
         if (result.equals("work")) {
-//          work+=1
-          work += (d._2.getTime() - d._1.getTime()) / 1000
+          work+=1
         }
         else if (result.equals("home")) {
-//          home+=1
-          home += (d._2.getTime() - d._1.getTime()) / 1000
+          home+=1
         }
         else if (result.equals("unknown")) {
-//          unknown+=1
-          unknown += (d._2.getTime() - d._1.getTime()) / 1000
+          unknown+=1
         }
       }
       if ((home==0 && work==0) || (work+home)*10 < unknown) {
@@ -86,12 +80,22 @@ object weeks {
 
   case class temporaryStopPoint(plng:Double, plat:Double, dstart:Date, dend:Date) {
     override def toString: String = {
-
       var format = new SimpleDateFormat("yyyyMMddHHmmss")
       plng+","+plat+","+format.format(dstart)+","+format.format(dend)
-
     }
   }
+
+
+  def parse(line:String)={
+    val pieces=line.split(",")
+    val id=pieces(0)
+    val sdate=new Date(pieces(1).replace("CST",""))
+    val edate=new Date(pieces(2).replace("CST",""))
+    val lng=pieces(3).toDouble
+    val lat=pieces(4).toDouble
+    cellData(id,sdate,edate,lng,lat)
+  }
+
 
   /**
     * 用于第二次聚类，得到当前StopPoint的邻居们StopPoint，不考虑时间，只考虑不同StopPoint之间的距离
@@ -130,7 +134,6 @@ object weeks {
     * @param min_neighbors
     * @return
     */
-
   def DbscanSecond(line:(String,Iterable[stopPoint]),spatial_threshold:Double,min_neighbors:Int) = {
     var index= -1
     var clusterIndex=0
@@ -169,7 +172,6 @@ object weeks {
           {
             val cur=stack.pop()
             val newNeighbor=retrieve_neighbors_sp(cur, df, spatial_threshold)
-
             if(newNeighbor.length>=min_neighbors)
             {
               for(s<-newNeighbor)
@@ -217,13 +219,12 @@ object weeks {
   }
 
 
-
   def sortByDateTime(line:(String,Iterable[String])):(String,Iterable[String])={
     var ele=line._2.toArray
     val format=new SimpleDateFormat("yyyyMMddHHmmss")
     var date = new Date()
     (line._1,ele.sortBy(x=>
-     new Date((x.split(",")(1).replaceAll("CST","")))))
+      new Date((x.split(",")(1).replaceAll("CST","")))))
   }
 
 
@@ -252,10 +253,11 @@ object weeks {
   def parseActiveData(line: String) :(String,cellData) = {
     var items = line.split(",")
     val id = items(0)
-    val date = new Date(items(1).replace("CST",""))
-    val lng = items(2).toDouble
-    val lat = items(3).toDouble
-    (id, cellData(id,date,lng,lat))
+    val sdate = new Date(items(1).replace("CST",""))
+    val edate = new Date(items(2).replace("CST",""))
+    val lng = items(3).toDouble
+    val lat = items(4).toDouble
+    (id, cellData(id,sdate,edate,lng,lat))
   }
 
   /**
@@ -266,8 +268,9 @@ object weeks {
     */
   def continueStopPoint(data: (String,Iterable[stopPoint]), n: Int): Boolean = {
     var stopPoints = data._2
-//    var cl = Calendar.getInstance()
+    //    var cl = Calendar.getInstance()
     var DaySet = mutable.Set[Int]()
+    var calendar = Calendar.getInstance()
     for( s <- stopPoints){
       calendar.setTime(s.dStart)
       var day = calendar.get(Calendar.DAY_OF_MONTH)
@@ -285,9 +288,11 @@ object weeks {
   def continueCell(data:(String, Iterable[cellData]), n:Int) :Boolean = {
     var cellDatas = data._2
     var DaySet = mutable.Set[Int]()
+
+    var calendar = Calendar.getInstance()
     DaySet.clear()
     for (data <- cellDatas) {
-      calendar.setTime(data.date)
+      calendar.setTime(data.sdate)
       var day = calendar.get(Calendar.DAY_OF_MONTH)
       DaySet.add(day)
     }
@@ -302,23 +307,26 @@ object weeks {
     /**
       * 两周的数据第一次聚类
       */
-    var data = sc.textFile("hdfs://bigdata01:9000/home/wx/twoweeks/clusterResults/stopAll/*/*")
-    var results = data.map(x=>parseClusterRes(x)).groupByKey(5)
+
+    var cluster_first_allStop = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/2019/201906/*/AllStop/*"
+    var cluster_second = "hdfs://dcoshdfs/private_data/useryjj/2Cluster/2019/201906/"
+
+    var data = sc.textFile(cluster_first_allStop)
+    var results = data.map(x=>parseClusterRes(x)).groupByKey(5).filter( x=>continueStopPoint(x,3))
       .map(x => DbscanSecond(x,500,2))
     var allLSP = results.filter(x=>x._2.size>0).map(x=>(x._1,x._2)).flatMapValues(x=>x)
       .map(x=>x._1+","+x._2.toString)
-    allLSP.saveAsTextFile("hdfs://bigdata01:9000/home/wx/twoweeks/clusterSecond/allLSP")
+    allLSP.saveAsTextFile(cluster_second + "AllLSP")
     var onlyLSP = results.filter( x=> (x._2.size>0 && x._3.size==0)).map(x=>(x._1,x._2)).flatMapValues(x=>x)
       .map(x=>x._1+","+x._2.toString)
-    onlyLSP.saveAsTextFile("hdfs://bigdata01:9000/home/wx/twoweeks/clusterSecond/onlyLSP")
+    onlyLSP.saveAsTextFile(  cluster_second + "OnlyLSP")
     var allTSP = results.filter(x=> x._3.size>0).map(x=>(x._1,x._3)).flatMapValues(x=>x)
       .map(x=>x._1+","+x._2.toString)
-    allTSP.saveAsTextFile("hdfs://bigdata01:9000/home/wx/twoweeks/clusterSecond/allTSP")
+    allTSP.saveAsTextFile(cluster_second + "AllTSP")
     var onlyTSP = results.filter(x=> (x._2.size==0 && x._3.size>0)).map(x=>(x._1,x._3)).flatMapValues(x=>x)
       .map(x=>x._1+","+x._2.toString)
-    onlyTSP.saveAsTextFile("hdfs://bigdata01:9000/home/wx/twoweeks/clusterSecond/onlyTSP")
-
-    }
+    onlyTSP.saveAsTextFile( cluster_second + "OnlyTSP")
 
 
+  }
 }
