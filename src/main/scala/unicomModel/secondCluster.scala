@@ -1,18 +1,14 @@
 package unicomModel
 
-import java.text.SimpleDateFormat
-
+import java.text.{DecimalFormat, SimpleDateFormat}
 import java.time.LocalDate
-
 
 import scala.collection.mutable.ListBuffer
 import java.util.Date
 import java.util.Calendar
 
-
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
-import firstCluster.{calcDis, cellData, movePoint,stopPoint, tDbscanAndJudgeAttri,judgePointAttri}
-
+import firstCluster.{calcDis, cellData, judgePointAttri, movePoint, stopPoint, tDbscanAndJudgeAttri}
 
 import scala.collection.mutable
 import scala.io.Source
@@ -28,7 +24,8 @@ object secondCluster {
       var line = new StringBuilder()
       attr = this.attributeJudge(times)
       moreThan2Days(times)
-      line.append(plng + ","+ plat + ","+ attr + "," + daycount + ",")
+      var df = new DecimalFormat("0.0000")
+      line.append(df.format(plng) + "," + df.format(plat) + ","+ attr + "," + daycount + ",")
       var len = times.size
       line.append(len)
       val format = new SimpleDateFormat("yyyyMMddHHmmss")
@@ -81,7 +78,8 @@ object secondCluster {
   case class temporaryStopPoint(plng:Double, plat:Double, dstart:Date, dend:Date) {
     override def toString: String = {
       var format = new SimpleDateFormat("yyyyMMddHHmmss")
-      plng+","+plat+","+format.format(dstart)+","+format.format(dend)
+      var df = new DecimalFormat("0.0000")
+      df.format(plng)+","+df.format(plat)+","+format.format(dstart)+","+format.format(dend)
     }
   }
 
@@ -302,18 +300,18 @@ object secondCluster {
 
 
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("weeks").setMaster("spark://bigdata02:7077").set("spark.executor.memory", "128g").set("spark.executor.cores", "32")
+    val conf = new SparkConf().setAppName("second_weeks_600M").setMaster("spark://master01:7077")
     val sc = new SparkContext(conf)
     /**
       * 两周的数据第一次聚类
       */
-
-    var cluster_first_allStop = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/2019/201906/*/AllStop/*"
-    var cluster_second = "hdfs://dcoshdfs/private_data/useryjj/2Cluster/2019/201906/"
+    var cluster_first_allStop = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/600M_30MIN/2019/201906/2019061[01234]/AllStop/*"
+//    var cluster_first_allStop = "hdfs://dcoshdfs/private_data/useryjj/1ClusterNew/Weeks/2019/201906/*/AllStop/*"
+    var cluster_second = "hdfs://dcoshdfs/private_data/useryjj/2Cluster/Filter3Days/600M/2019/201906/20190610_14/"
 
     var data = sc.textFile(cluster_first_allStop)
     var results = data.map(x=>parseClusterRes(x)).groupByKey(5).filter( x=>continueStopPoint(x,3))
-      .map(x => DbscanSecond(x,500,2))
+      .map(x => DbscanSecond(x,300,2))
     var allLSP = results.filter(x=>x._2.size>0).map(x=>(x._1,x._2)).flatMapValues(x=>x)
       .map(x=>x._1+","+x._2.toString)
     allLSP.saveAsTextFile(cluster_second + "AllLSP")

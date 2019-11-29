@@ -1,5 +1,4 @@
-package test
-
+package DZM
 
 import org.apache.spark.{SparkConf, SparkContext}
 import scala.collection.mutable.ListBuffer

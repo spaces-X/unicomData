@@ -404,7 +404,7 @@ object firstCluster {
 
   def main(args: Array[String]): Unit = {
 
-    val conf = new SparkConf().setAppName("firstCluster").setMaster("spark://master01:7077")
+    val conf = new SparkConf().setAppName("firstCluster300M").setMaster("spark://master01:7077")
     val sc = new SparkContext(conf)
 
     if (args.length != 2  || !args(0).substring(0,6).equals(args(1).substring(0,6))) {
@@ -426,7 +426,7 @@ object firstCluster {
       var currentDate = calstart.getTime()
       var currentDString = sdf.format(currentDate)
       var inPath = "hdfs://dcoshdfs/private_data/useryjj/ImsiPath/2019/" + month + "/" + currentDString + "/*"
-      var outputPathDir = "hdfs://dcoshdfs/private_data/useryjj/1ClusterNew/Jars/2019/" + month + "/" + currentDString + "/"
+      var outputPathDir = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/300M_30MIN/2019/" + month + "/" + currentDString + "/"
 
       var data = sc.textFile(inPath).filter(x => judgeData(x)).map(x => parseData(x)).groupByKey(32)
 
