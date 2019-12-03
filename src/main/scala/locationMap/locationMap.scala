@@ -32,6 +32,18 @@ object locationMap {
     (id, location)
   }
 
+  def filter(data: (String, String),lng1: Double, lat1: Double, lng2: Double, lat2:Double): Boolean = {
+    var value = data._2
+    var splits : Array[String] = value.split(",")
+    var lng = splits(0).toDouble
+    var lat = splits(1).toDouble
+    if (lng < lng1 || lng > lng2 || lat < lat2 || lat > lat1)
+      false
+    else
+      true
+
+  }
+
   /**
    * 处理轨迹data 判断 是否是4G基站，生成基站id 并且作为key
    *
@@ -96,7 +108,7 @@ object locationMap {
     }
     val conf = new SparkConf().setAppName("locationMap").setMaster("spark://master01:7077")
     val sc = new SparkContext(conf)
-    var locationData = sc.textFile("hdfs://dcoshdfs/private_data/mengmh/jizhan20190617.txt")
+    var locationData = sc.textFile("hdfs://dcoshdfs/private_data/useryjj/jizhan20190617.txt")
     var locationMapped = locationData.repartition(1).map(x => parseLocationData(x))
     var start = args(0)
     var month = start.substring(0,6)
