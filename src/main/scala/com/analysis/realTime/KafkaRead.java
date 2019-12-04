@@ -1,4 +1,4 @@
-package realTime;
+package com.analysis.realTime;
 
 //public class KafkaRead {
 //}
@@ -11,7 +11,6 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 
-import java.io.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

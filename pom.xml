@@ -32,7 +32,7 @@
                             <addClasspath>true</addClasspath>
                             <useUniqueVersions>false</useUniqueVersions>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>realTime.KafkaRead</mainClass>
+                            <mainClass>com.analysis.realTime.KafkaRead</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -66,7 +66,7 @@
                     <archive>
                         <manifest>
                             <mainClass>
-                                realTime.KafkaRead
+                                com.analysis.realTime.KafkaRead
                             </mainClass>
                         </manifest>
                     </archive>
@@ -104,6 +104,35 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-nop</artifactId>
             <version>1.7.2</version>
+        </dependency>
+
+<!--        redis 依赖和测试依赖-->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+<!--        工具-->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.6</version>
         </dependency>
 <!--        <dependency>-->
 <!--            <groupId>org.apache.spark</groupId>-->

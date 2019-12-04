@@ -1,4 +1,4 @@
-package locationMap
+package com.analysis.locationMap
 
 import java.security.InvalidParameterException
 import java.text.SimpleDateFormat
@@ -106,7 +106,7 @@ object locationMap {
     if (args.length != 1) {
       throw new InvalidParameterException("Input must be a Date like yyyymmdd");
     }
-    val conf = new SparkConf().setAppName("locationMap").setMaster("spark://master01:7077")
+    val conf = new SparkConf().setAppName("com/analysis/locationMap").setMaster("spark://master01:7077")
     val sc = new SparkContext(conf)
     var locationData = sc.textFile("hdfs://dcoshdfs/private_data/useryjj/jizhan20190617.txt")
     var locationMapped = locationData.repartition(1).map(x => parseLocationData(x))

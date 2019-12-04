@@ -1,4 +1,4 @@
-package mobileModel
+package com.analysis.mobileModel
 
 import java.text.SimpleDateFormat
 

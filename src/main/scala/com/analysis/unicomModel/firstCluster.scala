@@ -1,4 +1,4 @@
-package unicomModel
+package com.analysis.unicomModel
 
 
 import java.security.InvalidParameterException
