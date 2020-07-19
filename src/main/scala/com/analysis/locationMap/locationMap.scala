@@ -1,5 +1,6 @@
-package locationMap
+package com.analysis.locationMap
 
+import java.security.InvalidParameterException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
@@ -29,6 +30,18 @@ object locationMap {
     }
     var location = items(2) + "," + items(3)
     (id, location)
+  }
+
+  def filter(data: (String, String),lng1: Double, lat1: Double, lng2: Double, lat2:Double): Boolean = {
+    var value = data._2
+    var splits : Array[String] = value.split(",")
+    var lng = splits(0).toDouble
+    var lat = splits(1).toDouble
+    if (lng < lng1 || lng > lng2 || lat < lat2 || lat > lat1)
+      false
+    else
+      true
+
   }
 
   /**
@@ -90,39 +103,39 @@ object locationMap {
   }
 
   def main(args: Array[String]): Unit = {
-
-    val conf = new SparkConf().setAppName("test").setMaster("spark://master01:7077")
-    val sc = new SparkContext(conf)
-    var locationData = sc.textFile("hdfs://dcoshdfs/private_data/mengmh/jizhan20190617.txt")
-    var locationMapped = locationData.repartition(1).map(x => parseLocationData(x))
-
-    for(i<- 6 to 6) {
-      var start = "20190" + i + "11"
-      var month = "20190" + i
-      var sdf = new SimpleDateFormat("yyyyMMdd")
-      var dstart = sdf.parse(start)
-      var calstart = Calendar.getInstance()
-      var calend = Calendar.getInstance()
-      calstart.setTime(dstart)
-      calstart.add(Calendar.MONTH, 1)
-      var dend = calstart.getTime()
-      calstart.setTime(dstart)
-      calend.setTime(dend)
-      while (calstart.before(calend)) {
-        var currentDate = calstart.getTime()
-        var currentDString = sdf.format(currentDate)
-        var path = "hdfs://dcoshdfs/private_data/userrx/ImsiPath/2019/" + month + "/" + currentDString + "/" + "imsipath" + currentDString + ".csv"
-        var outputPath = "hdfs://dcoshdfs/private_data/useryjj/ImsiPath/2019/" + month + "/" + currentDString
-        var data = sc.textFile(path).filter(x => judgeData(x))
-        var mapped = data.map(x => parseData(x))
-        var joined = mapped.join(locationMapped)
-        var joinMap = joined.map(x => parsedJoined(x._2))
-        var out = joinMap.groupByKey(8).map(x => (x._1,x._2.toArray.sortBy(item => item.split(",")(1))))
-          .flatMap(x => x._2.iterator).map( x=> x)
-        out.saveAsTextFile(outputPath)
-        calstart.add(Calendar.DAY_OF_MONTH, 1)
-      }
+    if (args.length != 1) {
+      throw new InvalidParameterException("Input must be a Date like yyyymmdd");
     }
+    val conf = new SparkConf().setAppName("com/analysis/locationMap").setMaster("spark://master01:7077")
+    val sc = new SparkContext(conf)
+    var locationData = sc.textFile("hdfs://dcoshdfs/private_data/useryjj/jizhan20190617.txt")
+    var locationMapped = locationData.repartition(1).map(x => parseLocationData(x))
+    var start = args(0)
+    var month = start.substring(0,6)
+    var sdf = new SimpleDateFormat("yyyyMMdd")
+    var dstart = sdf.parse(start)
+    var calstart = Calendar.getInstance()
+    var calend = Calendar.getInstance()
+    calstart.setTime(dstart)
+    calstart.add(Calendar.MONTH, 1)
+    var dend = calstart.getTime()
+    calstart.setTime(dstart)
+    calend.setTime(dend)
+    while (calstart.before(calend)) {
+      var currentDate = calstart.getTime()
+      var currentDString = sdf.format(currentDate)
+      var path = "hdfs://dcoshdfs/private_data/userrx/ImsiPath/2019/" + month + "/" + currentDString + "/" + "imsipath" + currentDString + ".csv"
+      var outputPath = "hdfs://dcoshdfs/private_data/useryjj/ImsiPath/2019/" + month + "/" + currentDString
+      var data = sc.textFile(path).filter(x => judgeData(x))
+      var mapped = data.map(x => parseData(x))
+      var joined = mapped.join(locationMapped)
+      var joinMap = joined.map(x => parsedJoined(x._2))
+      var out = joinMap.groupByKey(8).map(x => (x._1,x._2.toArray.sortBy(item => item.split(",")(1))))
+        .flatMap(x => x._2.iterator).map( x=> x)
+      out.saveAsTextFile(outputPath)
+      calstart.add(Calendar.DAY_OF_MONTH, 1)
+    }
+
   }
 
 

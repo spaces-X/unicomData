@@ -1,4 +1,4 @@
-package mobileModel
+package com.analysis.mobileModel
 
 import java.text.SimpleDateFormat
 
@@ -44,9 +44,9 @@ object weeks {
       line.toString()
     }
     def attributeJudge(times: Iterable[(Date,Date)]): String = {
-      var unknown = 0
-      var home = 0
-      var work = 0
+      var unknown = 0L
+      var home = 0L
+      var work = 0L
       var result = "null"
       for (d<-times) {
         var result = judgePointAttri(d._1,d._2)
