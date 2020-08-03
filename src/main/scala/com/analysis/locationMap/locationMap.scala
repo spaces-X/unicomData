@@ -103,7 +103,7 @@ object locationMap {
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
+    if (args.length != 2) {
       throw new InvalidParameterException("Input must be a Date like yyyymmdd");
     }
     val conf = new SparkConf().setAppName("com/analysis/locationMap").setMaster("spark://master01:7077")
@@ -114,11 +114,13 @@ object locationMap {
     var month = start.substring(0,6)
     var sdf = new SimpleDateFormat("yyyyMMdd")
     var dstart = sdf.parse(start)
+    var dend = sdf.parse(args(1))
     var calstart = Calendar.getInstance()
     var calend = Calendar.getInstance()
-    calstart.setTime(dstart)
-    calstart.add(Calendar.MONTH, 1)
-    var dend = calstart.getTime()
+//    calstart.setTime(dstart)
+//    calstart.add(Calendar.MONTH, 1)
+
+
     calstart.setTime(dstart)
     calend.setTime(dend)
     while (calstart.before(calend)) {

@@ -91,6 +91,7 @@ object firstCluster {
     var df = new DecimalFormat("0.0000")
     df.format(lng)
     var lat = items(4).toDouble
+    df.format(lat)
 
     (uuid,cellData(uuid,sdate,edate,lng,lat))
   }
