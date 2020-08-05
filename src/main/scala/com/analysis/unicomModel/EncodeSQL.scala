@@ -99,7 +99,7 @@ object EncodeSQL {
 
   def main(args: Array[String]): Unit = {
 
-    val conf = new SparkConf().setAppName("EncodeSQL").setMaster("spark://master01:7077");
+    val conf = new SparkConf().setAppName("EncodeSQL-Move").setMaster("spark://master01:7077");
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate();
     val sc: SparkContext = spark.sparkContext;
     val structSchema: StructType = StructType(
@@ -111,10 +111,17 @@ object EncodeSQL {
       ));
     var sdf = new SimpleDateFormat("yyyyMMddHHmmss");
     var start = args(0)
+    var distance = args(1)
+    if ( !distance.equals("300M") && !distance.equals("600M")) {
+      throw new InvalidParameterException("must be 300M or 600M")
+    }
+    var year = start.substring(0,4)
+    var month = start.substring(0,6)
     var sdate = sdf.parse(start)
-//    val path = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/600M_30MIN/2019/201906/2019061[01234]/AllStop/*"
-    val path = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/600M_30MIN/2019/201906/201906*/AllStop/*"
-    val outpath = "hdfs://dcoshdfs/private_data/useryjj/result/600M_30MIN/2019/201906/"
+    //var path = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/600M_30MIN/2019/201902/201902*/AllStop/*"
+
+    val path = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/"+ distance + "_30MIN/" + year + "/" + month + "/" + month + "*/" + "AllStop/*"
+    val outpath = "hdfs://dcoshdfs/private_data/useryjj/result/" + distance + "_30MIN/" + year + "/" + month + "/"
     val rdd = sc.textFile(path)
     import spark.implicits._
     val mapped = rdd.filter(x =>x.split(",")(0)!="id").map(x => Parse2RDD(x,sdate))

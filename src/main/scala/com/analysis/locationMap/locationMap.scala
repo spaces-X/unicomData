@@ -123,7 +123,7 @@ object locationMap {
 
     calstart.setTime(dstart)
     calend.setTime(dend)
-    while (calstart.before(calend)) {
+    while (! calstart.after(calend)) {
       var currentDate = calstart.getTime()
       var currentDString = sdf.format(currentDate)
       var path = "hdfs://dcoshdfs/private_data/userrx/ImsiPath/2019/" + month + "/" + currentDString + "/" + "imsipath" + currentDString + ".csv"

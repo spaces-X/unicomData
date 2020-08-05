@@ -22,7 +22,6 @@
                 <version>2.15.2</version>
                 <executions>
                     <execution>
-                        <id>scala-compile-first</id>
                         <goals>
                             <goal>compile</goal>
                         </goals>

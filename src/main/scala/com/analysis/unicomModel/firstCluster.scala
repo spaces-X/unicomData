@@ -293,12 +293,23 @@ object firstCluster {
       var clng=0.0
       var clat=0.0
       val l=x._2.sortBy(t=>t._2)
-      for(y<-l)
-      {
-        clng+=y._4
-        clat+=y._5
-      }
-      new stopPoint(clng/l.length,clat/l.length,l(0)._2,l(l.length-1)._3,
+
+      // ((lng,lat),时长)  并找到停留最长的 作为他的停留点
+      var mapped = l.map{
+        case (uid, sdate, edate, lng, lat, ints) => {
+          ((lng,lat),edate.getTime - sdate.getTime)
+        }
+      }.groupBy(x=>x._1).mapValues { x =>
+          var time: Long = 0;
+          for (stop <- x){
+            time += stop._2
+          }
+          time
+      }.maxBy(x=>x._2)
+      clng = mapped._1._1
+      clat = mapped._1._2
+
+      new stopPoint(clng,clat,l(0)._2,l(l.length-1)._3,
         judgePointAttri(l(0)._2,l(l.length-1)._3))
     }.toArray.sortBy(x=>x.dStart)
 
@@ -408,13 +419,19 @@ object firstCluster {
     val conf = new SparkConf().setAppName("firstCluster300M").setMaster("spark://master01:7077")
     val sc = new SparkContext(conf)
 
-    if (args.length != 2  || !args(0).substring(0,6).equals(args(1).substring(0,6))) {
-      throw new InvalidParameterException("Two input parameters must be two date in the same month like yyyyMMdd")
+    if (args.length != 3  || !args(0).substring(0,6).equals(args(1).substring(0,6))) {
+      throw new InvalidParameterException("Two input parameters must be two date in the same month like yyyyMMdd and one for distance")
     }
 
 
     var start = args(0)
     var end = args(1)
+    var distance = args(2)
+
+    if ( !distance.equals("300M") && !distance.equals("600M")) {
+      throw new InvalidParameterException("must be 300M or 600M")
+    }
+
     var month = start.substring(0,6)
     var sdf = new SimpleDateFormat("yyyyMMdd")
     var dstart = sdf.parse(start)
@@ -423,18 +440,21 @@ object firstCluster {
     var calend = Calendar.getInstance()
     calstart.setTime(dstart)
     calend.setTime(dend)
-    while (calstart.before(calend)) {
+    while (!calstart.after(calend)) {
       var currentDate = calstart.getTime()
       var currentDString = sdf.format(currentDate)
       var inPath = "hdfs://dcoshdfs/private_data/useryjj/ImsiPath/2019/" + month + "/" + currentDString + "/*"
-      var outputPathDir = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/300M_30MIN/2019/" + month + "/" + currentDString + "/"
+      var outputPathDir = "hdfs://dcoshdfs/private_data/useryjj/1Cluster/" + distance + "_30MIN/2019/" + month + "/" + currentDString + "/"
 
       var data = sc.textFile(inPath).filter(x => judgeData(x)).map(x => parseData(x)).groupByKey(32)
 
       // 过滤出 有数据时长占比为20h 的用户为活跃用户
       var active_data = data.filter(x => activeData(x, 20)).mapValues( x=>correctShake(x))
-
-      var first_results = active_data.map(x => tDbscanAndJudgeAttri(x, 300, 30 * 60 * 1000, 5))
+      var dis = 300
+      if (distance.equals("600M")) {
+        dis = 600
+      }
+      var first_results = active_data.map(x => tDbscanAndJudgeAttri(x, 600, 30 * 60 * 1000, 5))
 //      var sum = first_results.count()
 //      var all_stop_sum = first_results.filter(x => x._2.size > 0).count()
 //      var all_move_sum = first_results.filter(x => x._3.size > 0).count()
